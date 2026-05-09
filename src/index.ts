@@ -23,8 +23,18 @@ function toolNameToState(toolName: string): EmoteState {
   }
 }
 
+function isWezTerm(): boolean {
+  return process.env.TERM_PROGRAM?.toLowerCase() === "wezterm" || !!process.env.WEZTERM_PANE;
+}
+
 function createRenderer(config: any): Renderer {
+  if (isWezTerm()) {
+    log(`createRenderer: using ITermRenderer (WezTerm)`);
+    return new ITermRenderer(config.size);
+  }
+
   const caps = getCapabilities();
+
   if (caps.images === "kitty") {
     log(`createRenderer: using KittyRenderer`);
     return new KittyRenderer(config.size);
