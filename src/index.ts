@@ -23,7 +23,18 @@ function toolNameToState(toolName: string): EmoteState {
   }
 }
 
+function isZellij(): boolean {
+  return !!process.env.ZELLIJ;
+}
+
 function createRenderer(config: any): Renderer {
+  // getCapabilities() does not detect Zellij; it reports image support from
+  // the parent terminal, but Zellij does not reliably pass image protocols through.
+  if (isZellij()) {
+    log(`createRenderer: using AsciiRenderer (Zellij)`);
+    return new AsciiRenderer();
+  }
+
   const caps = getCapabilities();
   if (caps.images === "kitty") {
     log(`createRenderer: using KittyRenderer`);
