@@ -12,6 +12,12 @@ interface AsciiFrameMap {
   [state: string]: string | string[] | Record<string, string>;
 }
 
+function parseScalar(raw: string): string {
+  const trimmed = raw.trim();
+  const unquoted = trimmed.replace(/^["']|["']$/g, "");
+  return unquoted.replace(/\\n/g, "\n");
+}
+
 function parseSimpleYaml(text: string): AsciiFrameMap {
   const result: AsciiFrameMap = {};
   let currentKey: string | null = null;
@@ -35,7 +41,7 @@ function parseSimpleYaml(text: string): AsciiFrameMap {
       currentKey = topMatch[1];
       currentArr = null;
       currentObj = null;
-      const value = topMatch[2].replace(/^["']|["']$/g, "").trim();
+      const value = parseScalar(topMatch[2]);
       if (value) {
         // Inline scalar
         result[currentKey] = value;
@@ -50,7 +56,7 @@ function parseSimpleYaml(text: string): AsciiFrameMap {
     const arrMatch = line.match(/^\s+-\s+(.+)/);
     if (arrMatch) {
       if (!currentArr) currentArr = [];
-      currentArr.push(arrMatch[1].replace(/^["']|["']$/g, "").trim());
+      currentArr.push(parseScalar(arrMatch[1]));
       continue;
     }
 
@@ -58,7 +64,7 @@ function parseSimpleYaml(text: string): AsciiFrameMap {
     const nestedMatch = line.match(/^\s+(\w[\w-]*):\s+(.+)/);
     if (nestedMatch) {
       if (!currentObj) currentObj = {};
-      currentObj[nestedMatch[1]] = nestedMatch[2].replace(/^["']|["']$/g, "").trim();
+      currentObj[nestedMatch[1]] = parseScalar(nestedMatch[2]);
       continue;
     }
   }
