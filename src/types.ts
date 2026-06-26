@@ -1,5 +1,7 @@
 export type EmoteState = "hi" | "idle" | "think" | "talk" | "read" | "write" | "tool" | "success" | "failure" | "compact";
 
+export type ThemeColor = "accent" | "border" | "borderAccent" | "borderMuted" | "success" | "error" | "warning" | "muted" | "dim" | "text" | "thinkingText";
+
 export interface Config {
   enabled: boolean;
   debug: boolean;
@@ -12,6 +14,12 @@ export interface Config {
   cycleMs: number;
   emotes: EmoteMapping[];
   terminals: TerminalMapping[];
+  colors?: {
+    model?: ThemeColor;
+    progress?: ThemeColor;
+    stats?: ThemeColor;
+    directory?: ThemeColor;
+  };
 }
 
 export interface EmoteMapping {

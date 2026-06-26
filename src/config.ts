@@ -54,6 +54,12 @@ const DEFAULTS: Config = {
     { match: "ghostty", render: "kitty" },
     { match: "warpterminal", render: "kitty" },
   ],
+  colors: {
+    model: "accent",
+    progress: "border",
+    stats: "dim",
+    directory: "muted",
+  },
 };
 
 /**

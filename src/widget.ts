@@ -52,15 +52,22 @@ function buildProgressBar(usage: any, latestCacheRead: number, latestInput: numb
 
 // --- Info panel ---
 
-function buildInfoLines(width: number, avatarWidth: number, ctxRef: any, pi: any, theme: any): string[] {
+function buildInfoLines(width: number, avatarWidth: number, ctxRef: any, pi: any, theme: any, config: any): string[] {
   const lines: string[] = [];
   if (!ctxRef) return lines;
 
-  // Create theme style appliers
-  const styleModel = (s: string) => theme.bold(theme.fg("accent", s));
-  const styleProgress = (s: string) => theme.fg("borderAccent", s);
-  const styleStats = (s: string) => theme.fg("dim", s);
-  const stylePwd = (s: string) => theme.fg("warning", s);
+  // Get color configuration with defaults
+  const colors = config.colors ?? {};
+  const modelColor = colors.model ?? "accent";
+  const progressColor = colors.progress ?? "border";
+  const statsColor = colors.stats ?? "dim";
+  const directoryColor = colors.directory ?? "muted";
+
+  // Create theme style appliers using configured colors
+  const styleModel = (s: string) => theme.bold(theme.fg(modelColor, s));
+  const styleProgress = (s: string) => theme.fg(progressColor, s);
+  const styleStats = (s: string) => theme.fg(statsColor, s);
+  const stylePwd = (s: string) => theme.fg(directoryColor, s);
 
   // Line 1: Model + thinking level + context window
   const model = ctxRef.model;
@@ -273,7 +280,7 @@ export function createWidgetFactory(deps: WidgetDeps) {
           ?? ((s: string) => theme.fg("border", s));
         const border = borderColor("─".repeat(width));
         const avatarWidth = frame.kind === "text" ? TEXT_CANVAS_COLS : config.size;
-        const infoLines = buildInfoLines(width, avatarWidth, deps.getCtxRef(), deps.pi, theme);
+        const infoLines = buildInfoLines(width, avatarWidth, deps.getCtxRef(), deps.pi, theme, config);
 
         const lines: string[] = [];
         lines.push(border);
