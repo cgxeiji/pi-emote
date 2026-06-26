@@ -70,6 +70,32 @@ Only include what you want to change:
 
 See `config.json` in the extension root for all defaults.
 
+### Text Colors
+
+Customize the info panel text colors using your pi theme colors. The info panel has four lines:
+
+1. **Model name** (line 1) — model name, thinking level, context window
+2. **Progress bar** (line 2) — token usage and context fill indicator
+3. **Stats** (line 3) — input/output tokens, cache hit rate, cost
+4. **Directory** (line 4) — current working directory
+
+Example with custom colors:
+
+```json
+{
+  "colors": {
+    "model": "accent",
+    "progress": "border",
+    "stats": "dim",
+    "directory": "muted"
+  }
+}
+```
+
+Available theme colors: `accent`, `border`, `borderAccent`, `borderMuted`, `success`, `error`, `warning`, `muted`, `dim`, `text`, `thinkingText`.
+
+All color fields are optional — omitted fields use defaults.
+
 ## Multiplexers
 
 pi-emote can render image avatars through **tmux** using DCS passthrough. When tmux is detected, pi-emote auto-detects the outer terminal and picks the right image protocol.
