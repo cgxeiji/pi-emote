@@ -56,6 +56,12 @@ function buildInfoLines(width: number, avatarWidth: number, ctxRef: any, pi: any
   const lines: string[] = [];
   if (!ctxRef) return lines;
 
+  // Create theme style appliers
+  const styleModel = (s: string) => theme.bold(theme.fg("accent", s));
+  const styleProgress = (s: string) => theme.fg("borderAccent", s);
+  const styleStats = (s: string) => theme.fg("dim", s);
+  const stylePwd = (s: string) => theme.fg("warning", s);
+
   // Line 1: Model + thinking level + context window
   const model = ctxRef.model;
   let modelStr = model?.name ?? "no model";
@@ -69,7 +75,7 @@ function buildInfoLines(width: number, avatarWidth: number, ctxRef: any, pi: any
     const window = formatTokens(usage.contextWindow);
     modelStr += ` • ${window}`;
   }
-  lines.push(theme.bold(modelStr));
+  lines.push(modelStr);
 
   // Line 2: Progress bar
   // Calculate cumulative totals and extract latest message stats
@@ -100,14 +106,16 @@ function buildInfoLines(width: number, avatarWidth: number, ctxRef: any, pi: any
     }
   } catch (_) { /* ignore if not available */ }
 
-  lines.push(buildProgressBar(usage, latestCacheRead, latestInput, latestCacheWrite));
+  const progressBar = buildProgressBar(usage, latestCacheRead, latestInput, latestCacheWrite);
+  lines.push(progressBar);
 
   // Line 3: Stats with cache hit rate
   // Calculate cache hit rate using pi's formula
   const latestPromptTokens = latestInput + latestCacheRead + latestCacheWrite;
   const cacheHitRate = latestPromptTokens > 0 ? (latestCacheRead / latestPromptTokens) * 100 : 0;
   
-  lines.push(`↑${formatTokens(totalInput)} ↓${formatTokens(totalOutput)} ⇞${cacheHitRate.toFixed(1)}% $${totalCost.toFixed(3)}`);
+  const statsStr = `↑${formatTokens(totalInput)} ↓${formatTokens(totalOutput)} ⇞${cacheHitRate.toFixed(1)}% $${totalCost.toFixed(3)}`;
+  lines.push(statsStr);
 
   // Line 4: Current working directory
   let pwd = ctxRef.sessionManager.getCwd?.() ?? process.cwd();
@@ -118,9 +126,11 @@ function buildInfoLines(width: number, avatarWidth: number, ctxRef: any, pi: any
   lines.push(pwd);
 
   const infoWidth = width - avatarWidth - 5;
-  return lines.map(l => {
-    if (visibleWidth(l) > infoWidth) return truncateToWidth(l, infoWidth, "…");
-    return l;
+  return lines.map((l, i) => {
+    // Apply color styling after truncation to preserve ANSI codes
+    const styleFn = [styleModel, styleProgress, styleStats, stylePwd][i] || ((s: string) => s);
+    const truncated = visibleWidth(l) > infoWidth ? truncateToWidth(l, infoWidth, "…") : l;
+    return styleFn(truncated);
   });
 }
 
