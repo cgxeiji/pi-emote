@@ -24,10 +24,17 @@
     { "match": "ghostty", "render": "kitty" },
     { "match": "warpterminal", "render": "kitty" }
   ],
-  "colors": {
-    "model": "accent",
-    "progress": "border",
-    "stats": "dim",
-    "directory": "muted"
+  "theme": {
+    "model-name": "thinking-level-color",
+    "progress-bar": {
+      "default": "text",
+      "cache-hit": "success",
+      "cache-miss": "error",
+      "almost-full": "warning"
+    },
+    "token-info": "dim",
+    "working-directory": "warning",
+    "border": "thinking-level-color",
+    "vertical-separator": "thinking-level-color"
   }
 }

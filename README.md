@@ -70,31 +70,44 @@ Only include what you want to change:
 
 See `config.json` in the extension root for all defaults.
 
-### Text Colors
+### Theme
 
-Customize the info panel text colors using your pi theme colors. The info panel has four lines:
-
-1. **Model name** (line 1) — model name, thinking level, context window
-2. **Progress bar** (line 2) — token usage and context fill indicator
-3. **Stats** (line 3) — input/output tokens, cache hit rate, cost
-4. **Directory** (line 4) — current working directory
-
-Example with custom colors:
+Customize the widget colors. All fields are optional — omitted fields use the defaults below:
 
 ```json
 {
-  "colors": {
-    "model": "accent",
-    "progress": "border",
-    "stats": "dim",
-    "directory": "muted"
+  "theme": {
+    "model-name": "accent",
+    "progress-bar": {
+      "default": "text",
+      "cache-hit": "success",
+      "cache-miss": "error",
+      "almost-full": "warning"
+    },
+    "token-info": "dim",
+    "working-directory": "warning",
+    "border": "thinking-level-color",
+    "vertical-separator": "thinking-level-color"
   }
 }
 ```
 
-Available theme colors: `accent`, `border`, `borderAccent`, `borderMuted`, `success`, `error`, `warning`, `muted`, `dim`, `text`, `thinkingText`.
+- **`model-name`** — model, thinking level, and context window (always bold)
+- **`progress-bar`** — token usage and context fill; color follows the context state:
+  - `cache-miss`: cache hit rate between 0% and 50% → `error`
+  - `almost-full`: context fill ≥ 75% → `warning` (when not a cache-miss)
+  - `cache-hit`: cache hit rate ≥ 50% → `success` (when not almost-full)
+  - `default`: no cache data yet (0% hit rate on a fresh session) → `text`
+- **`token-info`** — input/output tokens, cache hit rate, cost
+- **`working-directory`** — current working directory
+- **`border`** — top border line
+- **`vertical-separator`** — the `│` divider beside the avatar
 
-All color fields are optional — omitted fields use defaults.
+Each value is either a pi theme color token or the special `thinking-level-color` flag. `thinking-level-color` follows the thinking level's color (the same color the border uses by default), so it shifts live when the thinking level changes — unlike a fixed token like `thinkingHigh`, which pins one specific level's color.
+
+Available theme color tokens: `accent`, `border`, `borderAccent`, `borderMuted`, `success`, `error`, `warning`, `muted`, `dim`, `text`, `thinkingText`, `thinkingOff`–`thinkingMax`, `md*`, `syntax*`, `tool*` (full list in `src/types.ts`). All colors update live when pi's theme changes — no restart needed.
+
+Invalid values are ignored with a warning and fall back to the defaults.
 
 ## Multiplexers
 

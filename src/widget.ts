@@ -1,8 +1,9 @@
 import { visibleWidth, truncateToWidth } from "@earendil-works/pi-tui";
-import type { Config } from "./types.js";
+import type { Config, WidgetColor } from "./types.js";
 import type { Animator } from "./animator.js";
 import type { RenderedFrame } from "./renderer.js";
 import { log } from "./log.js";
+import { resolveProgressColor } from "./theme.js";
 
 // --- Token formatting ---
 
@@ -52,22 +53,17 @@ function buildProgressBar(usage: any, latestCacheRead: number, latestInput: numb
 
 // --- Info panel ---
 
+// --- Info panel ---
+
+/** Resolve a widget color to a text styler. "thinking-level-color" follows the current thinking level. */
+function colorStyler(color: WidgetColor, thinking: (s: string) => string, theme: any): (s: string) => string {
+  if (color === "thinking-level-color") return thinking;
+  return (s: string) => theme.fg(color, s);
+}
+
 function buildInfoLines(width: number, avatarWidth: number, ctxRef: any, pi: any, theme: any, config: any): string[] {
   const lines: string[] = [];
   if (!ctxRef) return lines;
-
-  // Get color configuration with defaults
-  const colors = config.colors ?? {};
-  const modelColor = colors.model ?? "accent";
-  const progressColor = colors.progress ?? "border";
-  const statsColor = colors.stats ?? "dim";
-  const directoryColor = colors.directory ?? "muted";
-
-  // Create theme style appliers using configured colors
-  const styleModel = (s: string) => theme.bold(theme.fg(modelColor, s));
-  const styleProgress = (s: string) => theme.fg(progressColor, s);
-  const styleStats = (s: string) => theme.fg(statsColor, s);
-  const stylePwd = (s: string) => theme.fg(directoryColor, s);
 
   // Line 1: Model + thinking level + context window
   const model = ctxRef.model;
@@ -133,11 +129,19 @@ function buildInfoLines(width: number, avatarWidth: number, ctxRef: any, pi: any
   lines.push(pwd);
 
   const infoWidth = width - avatarWidth - 5;
+
+  const thinkingStyler = theme.getThinkingBorderColor?.(thinkingLevel)
+    ?? ((s: string) => theme.fg("border", s));
+  const wt = config.theme;
+  const styleModel = (s: string) => theme.bold(colorStyler(wt["model-name"] ?? "accent", thinkingStyler, theme)(s));
+  const styleProgress = colorStyler(resolveProgressColor(usage?.percent ?? 0, cacheHitRate, wt["progress-bar"] ?? {}), thinkingStyler, theme);
+  const styleStats = colorStyler(wt["token-info"] ?? "dim", thinkingStyler, theme);
+  const stylePwd = colorStyler(wt["working-directory"] ?? "warning", thinkingStyler, theme);
+  const styleFns = [styleModel, styleProgress, styleStats, stylePwd];
+
   return lines.map((l, i) => {
-    // Apply color styling after truncation to preserve ANSI codes
-    const styleFn = [styleModel, styleProgress, styleStats, stylePwd][i] || ((s: string) => s);
-    const truncated = visibleWidth(l) > infoWidth ? truncateToWidth(l, infoWidth, "…") : l;
-    return styleFn(truncated);
+    if (visibleWidth(l) > infoWidth) l = truncateToWidth(l, infoWidth, "…");
+    return styleFns[i](l);
   });
 }
 
@@ -147,8 +151,8 @@ function buildInfoLines(width: number, avatarWidth: number, ctxRef: any, pi: any
  * Kitty image layout: image sequence on row 0 (zero-width, cursor doesn't move),
  * avatarPad fills the space. Info text beside the image on all rows.
  */
-function renderKittyFrame(frame: RenderedFrame & { kind: "image" }, width: number, config: Config, infoLines: string[], borderColor: (s: string) => string): string[] {
-  const sep = borderColor("│");
+function renderKittyFrame(frame: RenderedFrame & { kind: "image" }, width: number, config: Config, infoLines: string[], separatorColor: (s: string) => string): string[] {
+  const sep = separatorColor("│");
   const leftMargin = " ";
   const avatarPad = " ".repeat(config.size);
   const avatarSkip = `\x1b[${config.size}C`;
@@ -178,8 +182,8 @@ function renderKittyFrame(frame: RenderedFrame & { kind: "image" }, width: numbe
  *
  * Layout: frame.rows total (frame.rows-1 text rows + 1 image row).
  */
-function renderITermFrame(frame: RenderedFrame & { kind: "image" }, width: number, config: Config, infoLines: string[], borderColor: (s: string) => string): string[] {
-  const sep = borderColor("│");
+function renderITermFrame(frame: RenderedFrame & { kind: "image" }, width: number, config: Config, infoLines: string[], separatorColor: (s: string) => string): string[] {
+  const sep = separatorColor("│");
   const size = config.size;
   const skipPad = `\x1b[${1 + size}C`;
   const lines: string[] = [];
@@ -202,8 +206,8 @@ function renderITermFrame(frame: RenderedFrame & { kind: "image" }, width: numbe
 const TEXT_CANVAS_COLS = 8;
 const TEXT_CANVAS_ROWS = 4;
 
-function renderTextFrame(frame: RenderedFrame & { kind: "text" }, width: number, _config: Config, infoLines: string[], borderColor: (s: string) => string): string[] {
-  const sep = borderColor("│");
+function renderTextFrame(frame: RenderedFrame & { kind: "text" }, width: number, _config: Config, infoLines: string[], separatorColor: (s: string) => string): string[] {
+  const sep = separatorColor("│");
   const leftMargin = " ";
   const avatarPad = " ".repeat(TEXT_CANVAS_COLS);
 
@@ -236,8 +240,8 @@ function renderTextFrame(frame: RenderedFrame & { kind: "text" }, width: number,
  * Unicode placeholder layout: placeholder text lines fill rows 0–N.
  * Each line is already config.size wide (placeholder chars). Info beside it.
  */
-function renderPlaceholderFrame(frame: RenderedFrame & { kind: "placeholder" }, width: number, config: Config, infoLines: string[], borderColor: (s: string) => string): string[] {
-  const sep = borderColor("│");
+function renderPlaceholderFrame(frame: RenderedFrame & { kind: "placeholder" }, width: number, config: Config, infoLines: string[], separatorColor: (s: string) => string): string[] {
+  const sep = separatorColor("│");
   const leftMargin = " ";
   const lines: string[] = [];
 
@@ -276,8 +280,10 @@ export function createWidgetFactory(deps: WidgetDeps) {
         log(`render: kind=${frame.kind}, set="${deps.getCurrentEmoteSet()}"`);
 
         const thinkingLevel = deps.pi.getThinkingLevel?.() ?? "high";
-        const borderColor = (theme as any).getThinkingBorderColor?.(thinkingLevel)
+        const thinkingStyler = (theme as any).getThinkingBorderColor?.(thinkingLevel)
           ?? ((s: string) => theme.fg("border", s));
+        const borderColor = colorStyler(config.theme.border ?? "thinking-level-color", thinkingStyler, theme);
+        const separatorColor = colorStyler(config.theme["vertical-separator"] ?? "thinking-level-color", thinkingStyler, theme);
         const border = borderColor("─".repeat(width));
         const avatarWidth = frame.kind === "text" ? TEXT_CANVAS_COLS : config.size;
         const infoLines = buildInfoLines(width, avatarWidth, deps.getCtxRef(), deps.pi, theme, config);
@@ -287,14 +293,14 @@ export function createWidgetFactory(deps: WidgetDeps) {
 
         if (frame.kind === "image") {
           if (frame.cursorAdvances) {
-            lines.push(...renderITermFrame(frame, width, config, infoLines, borderColor));
+            lines.push(...renderITermFrame(frame, width, config, infoLines, separatorColor));
           } else {
-            lines.push(...renderKittyFrame(frame, width, config, infoLines, borderColor));
+            lines.push(...renderKittyFrame(frame, width, config, infoLines, separatorColor));
           }
         } else if (frame.kind === "placeholder") {
-          lines.push(...renderPlaceholderFrame(frame, width, config, infoLines, borderColor));
+          lines.push(...renderPlaceholderFrame(frame, width, config, infoLines, separatorColor));
         } else {
-          lines.push(...renderTextFrame(frame, width, config, infoLines, borderColor));
+          lines.push(...renderTextFrame(frame, width, config, infoLines, separatorColor));
         }
 
         return lines;
