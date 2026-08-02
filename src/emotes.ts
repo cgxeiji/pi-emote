@@ -9,20 +9,26 @@ function globToRegex(pattern: string): RegExp {
   return new RegExp(`^${escaped}$`, "i");
 }
 
-export function resolveEmoteSet(modelId: string, emotes: EmoteMapping[]): string {
+export function resolveEmoteSet(modelId: string, thinkingLevel: string, emotes: EmoteMapping[]): string {
   let matched: string | null = null;
-  let matchCount = 0;
+  let modelMatchCount = 0;
+  let thinkingMatchCount = 0;
 
   for (const entry of emotes) {
-    const regex = globToRegex(entry.model);
-    if (regex.test(modelId)) {
-      if (entry.model !== "*") matchCount++;
+    const modelPattern = entry.model ?? "*";
+    const thinkingPattern = entry["thinking-level"] ?? "*";
+    if (globToRegex(modelPattern).test(modelId) && globToRegex(thinkingPattern).test(thinkingLevel)) {
+      if (modelPattern !== "*") modelMatchCount++;
+      if (thinkingPattern !== "*") thinkingMatchCount++;
       matched = entry["emote-set"];
     }
   }
 
-  if (matchCount > 1) {
-    console.error(`[pi-emote] Warning: multiple emote patterns matched model "${modelId}", using last match.`);
+  if (modelMatchCount > 1) {
+    console.error(`[pi-emote] Warning: multiple model patterns matched model "${modelId}", using last match.`);
+  }
+  if (thinkingMatchCount > 1) {
+    console.error(`[pi-emote] Warning: multiple thinking-level patterns matched "${thinkingLevel}", using last match.`);
   }
 
   return matched ?? "default";

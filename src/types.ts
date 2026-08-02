@@ -23,7 +23,8 @@ export interface Config {
 }
 
 export interface EmoteMapping {
-  model: string;
+  model?: string;
+  "thinking-level"?: string;
   "emote-set": string;
 }
 

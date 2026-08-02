@@ -114,8 +114,8 @@ export default function (pi: ExtensionAPI) {
 
   loadEmoteSet("default");
 
-  function switchEmoteSetForModel(modelId: string) {
-    const setName = resolveEmoteSet(modelId, config.emotes);
+  function switchEmoteSet(modelId: string, thinkingLevel: string) {
+    const setName = resolveEmoteSet(modelId, thinkingLevel, config.emotes);
     if (setName !== currentEmoteSet) {
       loadEmoteSet(setName);
       log(`switchEmoteSet: loaded "${setName}", state="${animator.currentState}"`);
@@ -155,10 +155,11 @@ export default function (pi: ExtensionAPI) {
 
     if (!config.enabled) return;
 
-    // Resolve emote set for current model
+    // Resolve emote set for current model and thinking level
     const modelId = ctx.model?.id ?? "";
-    const setName = resolveEmoteSet(modelId, config.emotes);
-    log(`session_start: model="${modelId}" set="${setName}" dir="${findEmoteSetDir(setName, extDir, cwd)}"`);
+    const thinkingLevel = pi.getThinkingLevel();
+    const setName = resolveEmoteSet(modelId, thinkingLevel, config.emotes);
+    log(`session_start: model="${modelId}" thinkingLevel="${thinkingLevel}" set="${setName}" dir="${findEmoteSetDir(setName, extDir, cwd)}"`);
     loadEmoteSet(setName);
 
     // Create widget
@@ -188,9 +189,18 @@ export default function (pi: ExtensionAPI) {
   pi.on("model_select", async (event) => {
     if (!widgetActive) return;
     const modelId = event.model?.id ?? "";
-    const resolved = resolveEmoteSet(modelId, config.emotes);
-    log(`model_select: model="${modelId}" resolved="${resolved}" current="${currentEmoteSet}"`);
-    switchEmoteSetForModel(modelId);
+    const thinkingLevel = pi.getThinkingLevel();
+    const resolved = resolveEmoteSet(modelId, thinkingLevel, config.emotes);
+    log(`model_select: model="${modelId}" thinkingLevel="${thinkingLevel}" resolved="${resolved}" current="${currentEmoteSet}"`);
+    switchEmoteSet(modelId, thinkingLevel);
+  });
+
+  pi.on("thinking_level_select", async (event, ctx) => {
+    if (!widgetActive) return;
+    const modelId = ctx.model?.id ?? "";
+    const resolved = resolveEmoteSet(modelId, event.level, config.emotes);
+    log(`thinking_level_select: model="${modelId}" thinkingLevel="${event.level}" resolved="${resolved}" current="${currentEmoteSet}"`);
+    switchEmoteSet(modelId, event.level);
   });
 
   pi.on("message_update", async (event) => {

@@ -197,9 +197,9 @@ pi-emote searches in order:
 2. `~/.pi/agent/extensions/pi-emote/emotes/<name>/` (user)
 3. Extension built-in → falls back to `default`
 
-### Map models to sets
+### Map models or thinking levels to sets
 
-Glob patterns against model ID, last match wins:
+Glob patterns against model ID and/or thinking level, last match wins:
 
 ```json
 {
@@ -212,6 +212,31 @@ Glob patterns against model ID, last match wins:
 ```
 
 In this example, `claude` models use `my-avatar`, but `haiku` ones use `haiku-avatar`.
+
+Each entry matches on two dimensions — the model ID and the thinking level (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`). Unset selectors default to `*`, so existing model-only entries keep working unchanged. An entry matches when **all** of its selectors match; last match wins:
+
+```json
+{
+  "emotes": [
+    { "model": "*claude*", "emote-set": "my-avatar" },
+    { "thinking-level": "high", "emote-set": "focused-avatar" }
+  ]
+}
+```
+
+`claude` models get `my-avatar` at any thinking level, while **any** model at high thinking gets `focused-avatar`. To target a specific combination, set both selectors:
+
+```json
+{
+  "emotes": [
+    { "model": "*claude*", "thinking-level": "high", "emote-set": "deep-focus" }
+  ]
+}
+```
+
+This matches only `claude` models thinking at `high` level — anything else falls back to `default`.
+
+Order matters: later entries override earlier ones, so put broad mappings first and refinements last. A warning is logged when two entries clash within the same dimension (two model patterns or two thinking-level patterns both match); a model entry and a thinking-level entry matching together is intentional layering and stays silent.
 See `emotes/default/emotes.json` for per-set frame config (blink frames, talk weights).
 
 ## License

@@ -4,6 +4,9 @@
   "description": "Animated pixel-art emote widget for pi TUI",
   "author": "CGx <31814150+cgxeiji@users.noreply.github.com>",
   "license": "MIT",
+  "scripts": {
+    "test": "node --test \"tests/*.test.ts\""
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cgxeiji/pi-emote.git"
