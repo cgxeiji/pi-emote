@@ -161,6 +161,28 @@ iTerm2 and WezTerm use DCS passthrough for the iTerm2 image protocol. This works
 }
 ```
 
+### herdr
+
+[herdr](https://github.com/herdrdev/herdr) works with no setup, as long as herdr
+itself is told to render images:
+
+```toml
+# ~/.config/herdr/config.toml
+[experimental]
+kitty_graphics = true
+```
+
+The flag only applies to panes created after it is set, so open a new pane
+after enabling it.
+
+herdr passes the outer terminal's `TERM_PROGRAM` and `GHOSTTY_RESOURCES_DIR`
+into every pane, so pi-emote used to identify it as its host terminal and emit
+a cursor-anchored direct placement. herdr composes panes from a parsed cell
+grid, so those placements are wiped on the next repaint and the avatar shows as
+an empty box. pi-emote now detects herdr via `HERDR_PANE_ID` and uses the
+kitty-unicode renderer, whose Unicode placeholders live in the cell grid and
+survive repaints.
+
 ### Other Multiplexers
 
 **zellij** and **screen** are not yet supported and default to ASCII.

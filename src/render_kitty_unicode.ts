@@ -51,9 +51,16 @@ function weightedRandomPick(weights: Record<string, number>): string {
 
 /**
  * Build the kitty graphics transmit sequence (with virtual placement U=1).
- * Handles chunking for large payloads. Wrapped in tmux passthrough.
+ * Handles chunking for large payloads. Wrapped in tmux passthrough only when
+ * we are actually inside tmux; other hosts want the bare sequence.
  */
-function buildTransmitSequence(base64: string, imageId: number, cols: number, rows: number): string {
+function buildTransmitSequence(
+  base64: string,
+  imageId: number,
+  cols: number,
+  rows: number,
+  passthrough: boolean,
+): string {
   const chunks: string[] = [];
   let offset = 0;
 
@@ -76,7 +83,8 @@ function buildTransmitSequence(base64: string, imageId: number, cols: number, ro
     chunks.push(`\x1b_Ga=T,f=100,q=2,U=1,i=${imageId},c=${cols},r=${rows},m=0;\x1b\\`);
   }
 
-  return wrapTmuxPassthrough(chunks.join(""));
+  const sequence = chunks.join("");
+  return passthrough ? wrapTmuxPassthrough(sequence) : sequence;
 }
 
 /**
@@ -102,25 +110,33 @@ function buildPlaceholderLines(imageId: number, cols: number, rows: number): str
 }
 
 /**
- * Kitty Unicode Placeholder renderer for tmux.
+ * Kitty Unicode Placeholder renderer.
  *
  * Uses kitty's virtual placement + Unicode placeholder approach:
- * 1. Transmit image data via DCS passthrough (creates virtual placement)
+ * 1. Transmit image data (creates virtual placement)
  * 2. Display via U+10EEEE placeholder characters (regular text)
  *
- * This makes the image behave like normal text — tmux constrains it to
- * the pane, and switching sessions clears it naturally.
+ * This makes the image behave like normal text, so any host that composes a
+ * cell grid keeps the image anchored to its cells instead of to a cursor
+ * position. tmux constrains it to the pane and clears it on session switch;
+ * terminal multiplexers that repaint panes (herdr) keep it across redraws
+ * that would wipe a cursor-anchored direct placement.
+ *
+ * Pass `passthrough: true` only inside tmux, which needs the transmit wrapped
+ * in a DCS escape. Everywhere else the bare sequence is correct.
  */
-export class TmuxKittyUnicodeRenderer implements Renderer {
+export class KittyUnicodeRenderer implements Renderer {
   private tuiRef: TUI | null = null;
   private frameMap: Map<EmoteState, FrameSet> = new Map();
   private lastShownBase64: string | null = null;
   private currentFrame: RenderedFrame | null = null;
   private size: number;
   private imageId: number;
+  private passthrough: boolean;
 
-  constructor(size: number) {
+  constructor(size: number, passthrough = false) {
     this.size = size;
+    this.passthrough = passthrough;
     // Random 24-bit image ID (required for truecolor encoding)
     this.imageId = Math.floor(Math.random() * 0xFFFFFE) + 1;
   }
@@ -146,14 +162,14 @@ export class TmuxKittyUnicodeRenderer implements Renderer {
     const cols = this.size;
     const rows = calculateImageRows(dims, cols, cellDims);
 
-    // Transmit image data via passthrough (uploads to terminal's image store)
-    const transmit = buildTransmitSequence(base64, this.imageId, cols, rows);
+    // Transmit image data (uploads to terminal's image store)
+    const transmit = buildTransmitSequence(base64, this.imageId, cols, rows, this.passthrough);
     process.stdout.write(transmit);
 
     // Build placeholder grid as text lines
     const lines = buildPlaceholderLines(this.imageId, cols, rows);
 
-    log(`TmuxKittyUnicodeRenderer.show: dims=${dims.widthPx}x${dims.heightPx}, cols=${cols}, rows=${rows}, imageId=${this.imageId}`);
+    log(`KittyUnicodeRenderer.show: dims=${dims.widthPx}x${dims.heightPx}, cols=${cols}, rows=${rows}, imageId=${this.imageId}, passthrough=${this.passthrough}`);
 
     this.currentFrame = { kind: "placeholder", lines, rows };
     this.tuiRef?.requestRender();
@@ -218,7 +234,7 @@ export class TmuxKittyUnicodeRenderer implements Renderer {
   dispose() {
     // Delete image from terminal's graphics memory
     const del = `\x1b_Ga=d,d=I,i=${this.imageId},q=2\x1b\\`;
-    process.stdout.write(wrapTmuxPassthrough(del));
+    process.stdout.write(this.passthrough ? wrapTmuxPassthrough(del) : del);
     this.currentFrame = null;
   }
 

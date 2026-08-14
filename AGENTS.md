@@ -38,6 +38,7 @@ pi-emote uses layered configuration with deep merge. Higher-priority layers over
     { "match": "zellij", "render": "ascii" },
     { "match": "tmux", "render": "auto" },
     { "match": "screen", "render": "ascii" },
+    { "match": "herdr", "render": "kitty-unicode" },
     { "match": "wezterm", "render": "iterm2" },
     { "match": "ghostty", "render": "kitty" }
   ]
@@ -135,13 +136,14 @@ The `terminals` array maps detected terminal/multiplexer names to specific image
     { "match": "zellij", "render": "ascii" },
     { "match": "tmux", "render": "auto" },
     { "match": "screen", "render": "ascii" },
+    { "match": "herdr", "render": "kitty-unicode" },
     { "match": "wezterm", "render": "iterm2" },
     { "match": "ghostty", "render": "kitty" }
   ]
 }
 ```
 
-tmux defaults to `"auto"` — auto-detects the outer terminal. Ghostty and kitty get `kitty-unicode` (pane-safe image rendering); other outer terminals fall back to ASCII with a helpful message. Other multiplexers (zellij, screen) default to `"ascii"`. WezTerm uses iTerm2 protocol (more reliable than Kitty on WezTerm). Terminals not listed (e.g., kitty, iterm2) fall through to pi-tui auto-detection.
+tmux defaults to `"auto"` — auto-detects the outer terminal. Ghostty and kitty get `kitty-unicode` (pane-safe image rendering); other outer terminals fall back to ASCII with a helpful message. Other multiplexers (zellij, screen) default to `"ascii"`. WezTerm uses iTerm2 protocol (more reliable than Kitty on WezTerm). herdr is detected via `HERDR_PANE_ID` before the terminal-emulator checks, because it passes the outer terminal's `TERM_PROGRAM`/`GHOSTTY_RESOURCES_DIR` into panes; it gets `kitty-unicode` since it composes panes from a cell grid and discards cursor-anchored direct placements on repaint. Terminals not listed (e.g., kitty, iterm2) fall through to pi-tui auto-detection.
 
 ### tmux Requirements
 
@@ -165,7 +167,7 @@ The auto-detection flow for tmux (when render is `"auto"`):
 1. Check `allow-passthrough` is `on` or `all` via `tmux show-options -g`
 2. Detect outer terminal via `tmux show-environment TERM_PROGRAM` (session-level, falls back to global)
 3. Map outer terminal to protocol: ghostty/kitty → kitty-unicode (pane-safe), iTerm.app/WezTerm → ascii (no pane-safe renderer available)
-4. Use `TmuxKittyUnicodeRenderer` for Ghostty/kitty; all others fall back to ASCII
+4. Use `KittyUnicodeRenderer` (with tmux DCS passthrough enabled) for Ghostty/kitty; all others fall back to ASCII
 
 If the user explicitly configures a concrete render value (`"kitty"`, `"kitty-unicode"`, `"iterm2"`, `"ascii"`) for tmux, all auto-detection and warnings are skipped.
 

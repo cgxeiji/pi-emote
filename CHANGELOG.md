@@ -2,6 +2,15 @@
 
 All notable changes to pi-emote will be documented in this file.
 
+## Unreleased
+
+### Added
+- **herdr support** — herdr panes are detected via `HERDR_PANE_ID` and render with the kitty-unicode renderer. Previously herdr was misidentified as its outer terminal (it passes `TERM_PROGRAM`/`GHOSTTY_RESOURCES_DIR` through to panes), so pi-emote emitted a direct placement that herdr's cell-grid compositor discards on repaint, leaving an empty box. Requires `experimental.kitty_graphics = true` in herdr's config, which only applies to panes created after it is enabled.
+
+### Changed
+- **`TmuxKittyUnicodeRenderer` is now `KittyUnicodeRenderer`** (`src/render_tmux_kitty_unicode.ts` → `src/render_kitty_unicode.ts`). The Unicode placeholder approach was never tmux-specific; only the DCS passthrough wrapping is, and that is now a constructor flag set for tmux alone. This makes `"render": "kitty-unicode"` usable outside tmux.
+- **`detectTerminalName()` moved to `src/detect_terminal.ts`**, unchanged apart from the herdr branch. It reads only environment variables, so keeping it free of the `@earendil-works/pi-tui` import lets it be unit tested without installing peer dependencies.
+
 ## v0.3.0
 
 ### Added
