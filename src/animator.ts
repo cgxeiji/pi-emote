@@ -1,7 +1,6 @@
 import type { TUI } from "@earendil-works/pi-tui";
 import type { EmoteState, Config, EmotesConfig } from "./types.js";
 import type { Renderer, RenderedFrame } from "./renderer.js";
-import { log } from "./log.js";
 
 // --- Helpers ---
 
@@ -28,6 +27,7 @@ export class Animator {
   private thinkTimer: ReturnType<typeof setTimeout> | null = null;
   private talkGapTimer: ReturnType<typeof setTimeout> | null = null;
   private talkDurationTimer: ReturnType<typeof setTimeout> | null = null;
+  private frameTimers = new Set<ReturnType<typeof setTimeout>>();
 
   // Cycle state
   private cycleIndex = 0;
@@ -82,6 +82,19 @@ export class Animator {
 
   // --- Timer management ---
 
+  private scheduleFrameTimer(callback: () => void, delay: number) {
+    const timer = setTimeout(() => {
+      this.frameTimers.delete(timer);
+      callback();
+    }, delay);
+    this.frameTimers.add(timer);
+  }
+
+  private clearFrameTimers() {
+    for (const timer of this.frameTimers) clearTimeout(timer);
+    this.frameTimers.clear();
+  }
+
   clearAllTimers() {
     if (this.holdTimer) { clearTimeout(this.holdTimer); this.holdTimer = null; }
     if (this.blinkTimer) { clearTimeout(this.blinkTimer); this.blinkTimer = null; }
@@ -90,6 +103,7 @@ export class Animator {
     if (this.talkGapTimer) { clearTimeout(this.talkGapTimer); this.talkGapTimer = null; }
     if (this.talkDurationTimer) { clearTimeout(this.talkDurationTimer); this.talkDurationTimer = null; }
     if (this.thinkTimer) { clearTimeout(this.thinkTimer); this.thinkTimer = null; }
+    this.clearFrameTimers();
   }
 
   private clearStateTimers() {
@@ -99,6 +113,7 @@ export class Animator {
     if (this.talkGapTimer) { clearTimeout(this.talkGapTimer); this.talkGapTimer = null; }
     if (this.talkDurationTimer) { clearTimeout(this.talkDurationTimer); this.talkDurationTimer = null; }
     if (this.thinkTimer) { clearTimeout(this.thinkTimer); this.thinkTimer = null; }
+    this.clearFrameTimers();
   }
 
   // --- State transitions ---
@@ -156,15 +171,15 @@ export class Animator {
     const blinkDuration = 150;
     const defaultFile = this.emotesConfig.idle?.default ?? "idle.png";
 
-    setTimeout(() => {
+    this.scheduleFrameTimer(() => {
       if (this.currentState !== "idle") return;
       this.renderer.showFrame("idle", defaultFile, true);
 
       if (doubleBlink) {
-        setTimeout(() => {
+        this.scheduleFrameTimer(() => {
           if (this.currentState !== "idle") return;
           this.renderer.showFrame("idle", blinkFile, true);
-          setTimeout(() => {
+          this.scheduleFrameTimer(() => {
             if (this.currentState !== "idle") return;
             this.renderer.showFrame("idle", defaultFile, true);
             this.scheduleBlink();
@@ -199,7 +214,7 @@ export class Animator {
     }
 
     const defaultFile = this.emotesConfig.think?.default ?? "think.png";
-    setTimeout(() => {
+    this.scheduleFrameTimer(() => {
       if (this.currentState !== "think") return;
       this.renderer.showFrame("think", defaultFile, true);
       this.scheduleThinkSwap();

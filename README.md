@@ -50,6 +50,10 @@ pi install git:github.com/cgxeiji/pi-emote
 | failure | Failed tool execution |
 | compact | Context compaction |
 
+## Command
+
+Use `/pi-emote-toggle` to hide or restore the widget for the current session. This does not change the persistent `enabled` setting.
+
 ## Config
 
 Drop a `config.json` in one of these paths (highest priority wins):

@@ -2,6 +2,11 @@
 
 All notable changes to pi-emote will be documented in this file.
 
+## Unreleased
+
+### Added
+- **Widget visibility command** — `/pi-emote-toggle` hides or restores the widget for the current session without changing the persistent `enabled` setting.
+
 ## v0.3.0
 
 ### Added
