@@ -2,6 +2,7 @@
   "enabled": true,
   "debug": false,
   "size": 8,
+  "asciiCanvas": { "cols": 8, "rows": 4 },
   "readingSpeed": 4,
   "hideBelow": 40,
   "holdDuration": {

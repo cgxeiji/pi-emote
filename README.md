@@ -70,6 +70,26 @@ Only include what you want to change:
 
 See `config.json` in the extension root for all defaults.
 
+### ASCII canvas
+
+The `ascii` renderer draws into a text canvas: every frame is centred inside it,
+and the whole canvas is always reserved, so the footer keeps a stable height while
+the avatar animates.
+
+The default is an 8×4 canvas — an 8×8 pixel-art avatar drawn with half blocks —
+which is what the bundled emote sets are drawn for. Raise it if your set is drawn
+for a bigger grid:
+
+```json
+{
+  "asciiCanvas": { "cols": 24, "rows": 12 }
+}
+```
+
+Each dimension falls back to its default on its own, so a typo in one of them does
+not discard the other. This only affects the `ascii` renderer: image and
+placeholder renderers take their width from `size`.
+
 ### Theme
 
 Customize the widget colors. All fields are optional — omitted fields use the defaults below:

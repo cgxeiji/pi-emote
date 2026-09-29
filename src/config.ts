@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Config, EmoteMapping, TerminalMapping } from "./types.js";
 import { DEFAULT_WIDGET_THEME, sanitizeWidgetTheme } from "./theme.js";
+import { DEFAULT_ASCII_CANVAS, sanitizeAsciiCanvas } from "./ascii_canvas.js";
 
 export interface ConfigResult {
   config: Config;
@@ -40,6 +41,7 @@ const DEFAULTS: Config = {
   enabled: true,
   debug: false,
   size: 8,
+  asciiCanvas: { ...DEFAULT_ASCII_CANVAS },
   readingSpeed: 4,
   hideBelow: 40,
   holdDuration: { hi: 2000, success: 1200, failure: 1200 },
@@ -122,6 +124,11 @@ export function loadLayeredConfig(extDir: string, cwd: string): ConfigResult {
 
   // "theme" — deep-merged above, then validated: warn + fall back to defaults
   merged.theme = sanitizeWidgetTheme(merged.theme);
+
+  // "asciiCanvas" — deep-merged above, then validated the same way
+  const asciiCanvas = sanitizeAsciiCanvas(merged.asciiCanvas);
+  if (asciiCanvas.warning) console.error(`[pi-emote] Warning: ${asciiCanvas.warning}`);
+  merged.asciiCanvas = asciiCanvas.canvas;
 
   // Track which terminal match keys were explicitly set by user or project config
   const userConfiguredTerminals = new Set<string>();

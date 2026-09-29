@@ -32,10 +32,17 @@ export interface WidgetTheme {
   "vertical-separator"?: WidgetColor;
 }
 
+/** Geometry of the ASCII text canvas the widget reserves for the avatar. */
+export interface AsciiCanvas {
+  cols: number;
+  rows: number;
+}
+
 export interface Config {
   enabled: boolean;
   debug: boolean;
   size: number;
+  asciiCanvas: AsciiCanvas;
   readingSpeed: number;
   hideBelow: number;
   holdDuration: { hi: number; success: number; failure: number };

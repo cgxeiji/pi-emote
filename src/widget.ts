@@ -203,17 +203,15 @@ function renderITermFrame(frame: RenderedFrame & { kind: "image" }, width: numbe
   return lines;
 }
 
-const TEXT_CANVAS_COLS = 8;
-const TEXT_CANVAS_ROWS = 4;
-
-function renderTextFrame(frame: RenderedFrame & { kind: "text" }, width: number, _config: Config, infoLines: string[], separatorColor: (s: string) => string): string[] {
+function renderTextFrame(frame: RenderedFrame & { kind: "text" }, width: number, config: Config, infoLines: string[], separatorColor: (s: string) => string): string[] {
   const sep = separatorColor("│");
   const leftMargin = " ";
-  const avatarPad = " ".repeat(TEXT_CANVAS_COLS);
+  const { cols, rows } = config.asciiCanvas;
+  const avatarPad = " ".repeat(cols);
 
-  // Fixed 8×4 canvas, vertically center the frame lines.
+  // Reserve the whole canvas and vertically center the frame lines inside it.
   const emoteLines = frame.lines;
-  const rowCount = Math.max(TEXT_CANVAS_ROWS, infoLines.length);
+  const rowCount = Math.max(rows, infoLines.length);
   const emoteStart = Math.floor((rowCount - emoteLines.length) / 2);
   const lines: string[] = [];
 
@@ -222,11 +220,11 @@ function renderTextFrame(frame: RenderedFrame & { kind: "text" }, width: number,
     const emote = (emoteIdx >= 0 && emoteIdx < emoteLines.length) ? emoteLines[emoteIdx] : "";
     const emoteWidth = visibleWidth(emote);
     // Warn if a line exceeds the canvas width
-    if (emoteWidth > TEXT_CANVAS_COLS) {
-      log(`AsciiRenderer: line ${emoteIdx} exceeds ${TEXT_CANVAS_COLS} cols (${emoteWidth})`);
+    if (emoteWidth > cols) {
+      log(`AsciiRenderer: line ${emoteIdx} exceeds ${cols} cols (${emoteWidth})`);
     }
     // Center within canvas
-    const totalPad = TEXT_CANVAS_COLS - emoteWidth;
+    const totalPad = cols - emoteWidth;
     const padLeft = totalPad > 0 ? " ".repeat(Math.floor(totalPad / 2)) : "";
     const padRight = totalPad > 0 ? " ".repeat(Math.ceil(totalPad / 2)) : "";
     const cell = emote ? `${padLeft}${emote}${padRight}` : avatarPad;
@@ -285,7 +283,7 @@ export function createWidgetFactory(deps: WidgetDeps) {
         const borderColor = colorStyler(config.theme.border ?? "thinking-level-color", thinkingStyler, theme);
         const separatorColor = colorStyler(config.theme["vertical-separator"] ?? "thinking-level-color", thinkingStyler, theme);
         const border = borderColor("─".repeat(width));
-        const avatarWidth = frame.kind === "text" ? TEXT_CANVAS_COLS : config.size;
+        const avatarWidth = frame.kind === "text" ? config.asciiCanvas.cols : config.size;
         const infoLines = buildInfoLines(width, avatarWidth, deps.getCtxRef(), deps.pi, theme, config);
 
         const lines: string[] = [];
