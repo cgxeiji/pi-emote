@@ -5,6 +5,7 @@ import type { Renderer, RenderedFrame } from "./renderer.js";
 import { discoverFrames } from "./emotes.js";
 import { wrapTmuxPassthrough } from "./tmux.js";
 import { log } from "./log.js";
+import { ImageIdPool } from "./image_id_pool.js";
 
 const PLACEHOLDER = "\u{10EEEE}";
 const CHUNK_SIZE = 4096;
@@ -117,12 +118,11 @@ export class TmuxKittyUnicodeRenderer implements Renderer {
   private lastShownBase64: string | null = null;
   private currentFrame: RenderedFrame | null = null;
   private size: number;
-  private imageId: number;
+  private idPool: ImageIdPool;
 
   constructor(size: number) {
     this.size = size;
-    // Random 24-bit image ID (required for truecolor encoding)
-    this.imageId = Math.floor(Math.random() * 0xFFFFFE) + 1;
+    this.idPool = new ImageIdPool();
   }
 
   setTui(tui: TUI | null) {
@@ -146,14 +146,17 @@ export class TmuxKittyUnicodeRenderer implements Renderer {
     const cols = this.size;
     const rows = calculateImageRows(dims, cols, cellDims);
 
+    // Take a fresh id so the image currently on screen is never overwritten mid-transfer.
+    const imageId = this.idPool.next();
+
     // Transmit image data via passthrough (uploads to terminal's image store)
-    const transmit = buildTransmitSequence(base64, this.imageId, cols, rows);
+    const transmit = buildTransmitSequence(base64, imageId, cols, rows);
     process.stdout.write(transmit);
 
     // Build placeholder grid as text lines
-    const lines = buildPlaceholderLines(this.imageId, cols, rows);
+    const lines = buildPlaceholderLines(imageId, cols, rows);
 
-    log(`TmuxKittyUnicodeRenderer.show: dims=${dims.widthPx}x${dims.heightPx}, cols=${cols}, rows=${rows}, imageId=${this.imageId}`);
+    log(`TmuxKittyUnicodeRenderer.show: dims=${dims.widthPx}x${dims.heightPx}, cols=${cols}, rows=${rows}, imageId=${imageId}`);
 
     this.currentFrame = { kind: "placeholder", lines, rows };
     this.tuiRef?.requestRender();
@@ -216,9 +219,11 @@ export class TmuxKittyUnicodeRenderer implements Renderer {
   }
 
   dispose() {
-    // Delete image from terminal's graphics memory
-    const del = `\x1b_Ga=d,d=I,i=${this.imageId},q=2\x1b\\`;
-    process.stdout.write(wrapTmuxPassthrough(del));
+    // Delete images from terminal's graphics memory
+    for (const id of this.idPool.all()) {
+      const del = `\x1b_Ga=d,d=I,i=${id},q=2\x1b\\`;
+      process.stdout.write(wrapTmuxPassthrough(del));
+    }
     this.currentFrame = null;
   }
 
