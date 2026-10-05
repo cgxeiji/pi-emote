@@ -61,7 +61,7 @@ function colorStyler(color: WidgetColor, thinking: (s: string) => string, theme:
   return (s: string) => theme.fg(color, s);
 }
 
-function buildInfoLines(width: number, avatarWidth: number, ctxRef: any, pi: any, theme: any, config: any): string[] {
+export function buildInfoLines(width: number, avatarWidth: number, ctxRef: any, pi: any, theme: any, config: any): string[] {
   const lines: string[] = [];
   if (!ctxRef) return lines;
 
@@ -252,6 +252,19 @@ function renderPlaceholderFrame(frame: RenderedFrame & { kind: "placeholder" }, 
   return lines;
 }
 
+function renderAvatarOnly(frame: RenderedFrame, width: number, config: Config): string[] {
+  if (frame.kind === "image") {
+    if (frame.cursorAdvances) {
+      return Array.from({ length: Math.max(0, frame.rows - 1) }, () => " ".repeat(width))
+        .concat(`${frame.rows > 1 ? `\x1b[${frame.rows - 1}A` : ""}${frame.sequence}`);
+    }
+    return Array.from({ length: frame.rows }, (_, i) =>
+      i === 0 ? `${frame.sequence}${" ".repeat(width)}` : " ".repeat(width),
+    );
+  }
+  return frame.kind === "text" ? frame.lines : frame.lines.slice(0, frame.rows);
+}
+
 // --- Widget factory ---
 
 export interface WidgetDeps {
@@ -278,6 +291,7 @@ export function createWidgetFactory(deps: WidgetDeps) {
         }
 
         log(`render: kind=${frame.kind}, set="${deps.getCurrentEmoteSet()}"`);
+        if (!config.showInfo) return renderAvatarOnly(frame, width, config);
 
         const thinkingLevel = deps.pi.getThinkingLevel?.() ?? "high";
         const thinkingStyler = (theme as any).getThinkingBorderColor?.(thinkingLevel)

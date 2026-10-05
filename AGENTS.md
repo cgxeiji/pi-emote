@@ -20,6 +20,8 @@ pi-emote uses layered configuration with deep merge. Higher-priority layers over
 {
   "enabled": true,
   "debug": false,
+  "position": "aboveEditor",
+  "showInfo": true,
   "size": 8,
   "readingSpeed": 4,
   "hideBelow": 80,
@@ -46,6 +48,8 @@ pi-emote uses layered configuration with deep merge. Higher-priority layers over
 
 - **enabled** — Toggle the widget on/off.
 - **debug** — Enable debug logging to `debug.log` in the extension directory.
+- **position** — `aboveEditor` or passive `topRight` overlay.
+- **showInfo** — Show/hide model, token, and session details independently of position.
 - **size** — Avatar width in terminal cells.
 - **readingSpeed** — Words per second used to pace talk animation duration.
 - **hideBelow** — Hide widget when terminal is narrower than this (columns).

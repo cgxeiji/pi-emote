@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Config, EmoteMapping, TerminalMapping } from "./types.js";
+import { applyLegacyLayout } from "./config-layout.js";
 import { DEFAULT_WIDGET_THEME, sanitizeWidgetTheme } from "./theme.js";
 
 export interface ConfigResult {
@@ -39,6 +40,8 @@ function loadJsonFile(path: string): any | null {
 const DEFAULTS: Config = {
   enabled: true,
   debug: false,
+  position: "aboveEditor",
+  showInfo: true,
   size: 8,
   readingSpeed: 4,
   hideBelow: 40,
@@ -98,11 +101,14 @@ export function loadLayeredConfig(extDir: string, cwd: string): ConfigResult {
   // Layer 3: Project config (highest priority)
   const projectConfig = loadJsonFile(join(cwd, ".pi", "extensions", "pi-emote", "config.json"));
 
-  // Deep merge in priority order
+  // Deep merge in priority order. Translate the prototype's old `layout`
+  // setting so existing local configs retain their behavior.
   let merged = DEFAULTS;
-  if (extConfig) merged = deepMerge(merged, extConfig);
-  if (userConfig) merged = deepMerge(merged, userConfig);
-  if (projectConfig) merged = deepMerge(merged, projectConfig);
+  for (const layer of [extConfig, userConfig, projectConfig]) {
+    if (!layer) continue;
+    merged = deepMerge(merged, layer);
+    applyLegacyLayout(merged as any, layer);
+  }
 
   // "emotes" — append arrays in priority order (last match wins)
   merged.emotes = mergeEmotes(

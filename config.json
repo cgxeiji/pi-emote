@@ -1,6 +1,8 @@
 {
   "enabled": true,
   "debug": false,
+  "position": "aboveEditor",
+  "showInfo": true,
   "size": 8,
   "readingSpeed": 4,
   "hideBelow": 40,

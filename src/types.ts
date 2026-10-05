@@ -35,6 +35,10 @@ export interface WidgetTheme {
 export interface Config {
   enabled: boolean;
   debug: boolean;
+  /** Where the avatar is positioned. */
+  position: "aboveEditor" | "topRight";
+  /** Whether model, token, and session details are shown alongside the avatar. */
+  showInfo: boolean;
   size: number;
   readingSpeed: number;
   hideBelow: number;

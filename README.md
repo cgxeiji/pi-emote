@@ -68,7 +68,19 @@ Only include what you want to change:
 }
 ```
 
-See `config.json` in the extension root for all defaults.
+See `config.json` in the extension root for all defaults. Avatar placement and the info panel are independent:
+
+- `position`: `"aboveEditor"` (default) or `"topRight"`.
+- `showInfo`: `true` (default) or `false`; controls the model, token, and session details.
+
+The top-right overlay is non-capturing, so it should not take keyboard focus from questions or other dialogs. Image rendering in overlays is experimental and may vary by terminal protocol.
+
+```json
+{
+  "position": "topRight",
+  "showInfo": false
+}
+```
 
 ### Theme
 

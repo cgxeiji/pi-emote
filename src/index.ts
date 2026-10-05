@@ -15,7 +15,8 @@ import { ITermRenderer } from "./render_iterm.js";
 import { TmuxITermRenderer } from "./render_tmux_iterm.js";
 import { AsciiRenderer } from "./render_ascii.js";
 import { Animator } from "./animator.js";
-import { createWidgetFactory } from "./widget.js";
+import { buildInfoLines, createWidgetFactory } from "./widget.js";
+import { createImageOverlayFactory } from "./overlay.js";
 import { resolveRenderer } from "./terminal.js";
 
 const IMAGE_STATES = ["hi", "idle", "think", "talk", "read", "write", "tool", "success", "failure", "compact"];
@@ -81,6 +82,7 @@ export default function (pi: ExtensionAPI) {
   let currentEmoteSet = "default";
   let ctxRef: any = null;
   let widgetActive = false;
+  let closeOverlay: (() => void) | null = null;
   let lastResolved = resolveRenderer(config.terminals, userConfiguredTerminals);
   let renderer = createRendererFromResolved(lastResolved, config.size);
 
@@ -162,14 +164,40 @@ export default function (pi: ExtensionAPI) {
     log(`session_start: model="${modelId}" thinkingLevel="${thinkingLevel}" set="${setName}" dir="${findEmoteSetDir(setName, extDir, cwd)}"`);
     loadEmoteSet(setName);
 
-    // Create widget
-    ctx.ui.setWidget("emote", createWidgetFactory({
-      animator,
-      config,
-      pi,
-      getCtxRef: () => ctxRef,
-      getCurrentEmoteSet: () => currentEmoteSet,
-    }), { placement: "aboveEditor" });
+    // Position and info visibility are independent settings.
+    if (config.position === "topRight") {
+      const overlayFactory = createImageOverlayFactory({
+        animator,
+        config,
+        getInfoLines: (width, avatarWidth, theme) =>
+          buildInfoLines(width, avatarWidth, ctxRef, pi, theme, config),
+      });
+      void ctx.ui.custom<void>((tui, _theme, _keybindings, done) => {
+        closeOverlay = () => done(undefined);
+        return overlayFactory(tui);
+      }, {
+        overlay: true,
+        overlayOptions: {
+          anchor: "top-right",
+          width: config.showInfo ? "100%" : config.size,
+          maxHeight: config.size + (config.showInfo ? 1 : 0),
+          margin: 1,
+          nonCapturing: true,
+          visible: (termWidth: number) => termWidth >= config.hideBelow,
+        },
+      }).catch((error: unknown) => {
+        log(`overlay failed: ${error instanceof Error ? error.message : String(error)}`);
+        closeOverlay = null;
+      });
+    } else {
+      ctx.ui.setWidget("emote", createWidgetFactory({
+        animator,
+        config,
+        pi,
+        getCtxRef: () => ctxRef,
+        getCurrentEmoteSet: () => currentEmoteSet,
+      }), { placement: "aboveEditor" });
+    }
 
     widgetActive = true;
     setTimeout(() => animator.transitionTo("hi"), 500);
@@ -177,6 +205,10 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("session_shutdown", async (_event, ctx) => {
     animator.clearAllTimers();
+    if (closeOverlay) {
+      closeOverlay();
+      closeOverlay = null;
+    }
     animator.disposeRenderer();
     if (widgetActive && ctx.hasUI) {
       ctx.ui.setWidget("emote", undefined);
